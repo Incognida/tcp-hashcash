@@ -1,0 +1,46 @@
+version: "3"
+services:
+  postgres:
+    container_name: backend_postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    expose:
+      - "5432"
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres", "-d", "postgres" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: build/server.Dockerfile
+    container_name: server
+    expose:
+      - "7772"
+    ports:
+      - "7772:7772"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      dockerfile: build/client.Dockerfile
+    container_name: client
+    depends_on:
+      server:
+        condition: service_started
+
+volumes:
+  data:
